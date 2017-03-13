@@ -153,6 +153,6 @@ function ranger(pageMax, minuteMin, startMinute) {
     return miniRanger(startMinute, 5);
 }
 
-ranger(1000, 352, 352);
+ranger(1000,process.env.PAGE_MIN || 340, process.env.PAGE_MAX || 352 );
 
 module.exports = processFile;
