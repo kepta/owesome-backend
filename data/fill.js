@@ -11,6 +11,7 @@ function fillDb(_data, page, min) {
     var existing = collection.findOne({ page: data.page });
     return existing.then(d => {
         if (!d) {
+            console.log('filled', data.page);
             return collection.insert(data);
         }
         return null;

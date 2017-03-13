@@ -118,11 +118,13 @@ function ranger(pageMax, minuteMin, startMinute) {
     var collection = db.get('pagemetadata');
 
     function miniRanger(minute, t) {
+        console.log('starting new', minute, t);
         if (minute < minuteMin) return Promise.resolve();
         function gooMin(x, y) {
+            console.log('doing', x, y);
             if (y >= pageMax) {
                 return Promise.all(R.range(x, pageMax).map((r) => {
-                    processFile(networkGet(r, minute), r, minute);
+                    return processFile(networkGet(r, minute), r, minute);
                 }))
                 .then(() => miniRanger(minute - 1, t))
                     .catch((e) => {
@@ -135,14 +137,18 @@ function ranger(pageMax, minuteMin, startMinute) {
                 _page += r;
                 return collection.findOne({ page: _page }).then(d => {
                     if (d) {
+                        console.log('already has', r, minute);
                         return null;
                     }
-                    console.log('doesnt has', r, minute);
-                    
                         return processFile(networkGet(r, minute), r, minute);
                     });
                 }))
-                .then(r => gooMin(y, y + t))
+                .then(r => {
+                    if (r) {
+                        return gooMin(y, y + t);
+                    }
+                    return null;
+                })
                 .catch(e => {
                     console.log(e);
                     return gooMin(x, y);
