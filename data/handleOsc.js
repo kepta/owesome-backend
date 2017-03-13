@@ -132,7 +132,7 @@ function ranger(pageMax, minuteMin, startMinute) {
                         return miniRanger(minute - 1, t);
                     });
             }
-            return Promise.all(R.range(x, y + 1).map((r) => {
+            return Promise.all(R.range(x, y).map((r) => {
                 var _page = 1000 * minute;
                 _page += r;
                 return collection.findOne({ page: _page }).then(d => {
