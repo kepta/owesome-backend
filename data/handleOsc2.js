@@ -8,7 +8,6 @@ var moment = require('moment');
 var mongod = require('mongodb');
 var monk = require('monk');
 var events = require('events');
-var dbName = require('../config');
 var fs = require('fs');
 dbName = dbName.split('/')[1];
 var db = monk(require('../config'));
@@ -51,7 +50,10 @@ function getMetaData(obj) {
     const members = R.compose(R.pluck('$'), R.unnest, R.filter(R.identity), R.pluck('member'))(obj);
     const memberPluck = R.curry((pluck, memb) => R.compose(R.uniq, R.filter(R.identity), R.pluck(pluck))(memb));
     const wayNd = R.compose(R.pluck('ref'), R.pluck('$'), R.unnest, R.filter(R.identity), R.pluck('nd'))(obj)
-
+    
+    if (!obj[0]) {
+        return null;
+    }
     return {
         wayNd,
         users: addTo('user', $),
@@ -89,7 +91,6 @@ const bgMp = R.forEachObjIndexed((cdm, key1) => R.forEachObjIndexed((nwr, key2) 
 })
 }, cdm));
 const flattenIt = R.curry(d => R.unnest(R.unnest(R.compose(R.map(R.values), R.values)(d))));
-const concatAll = R.unapply(R.reduce(R.concat, []));
 
 function digest(r) {
     var osmChange = gimme('osmChange')(r);
@@ -110,8 +111,10 @@ function newDigest(r) {
 
     const newExtractNWR = (rron, cdm) => {
         if (!rron) return [];
-        return concatAll(pick('node', cdm)(rron), pick('way', cdm)(rron), pick('relation', cdm)(rron));
+        return R.concat(pick('node', cdm)(rron), pick('way', cdm)(rron), pick('relation', cdm)(rron));
     };
+    const concatAll = R.unapply(R.reduce(R.concat, []));
+
     var result = concatAll(
         newExtractNWR(r.osmChange.create, 'create'),
         newExtractNWR(r.osmChange.modify, 'modify'),
@@ -211,18 +214,18 @@ class Worker {
     }
 }
 
-// @NOTE 352373 beyond this has delet
-var min = parseInt(process.env.PAGE_MIN);
-if (!min) {
-    var file = fs.readFileSync(dbName + 'lastAdded', 'utf-8');
-    file = file.split('\n').filter(x => x !== '');
-    file = parseInt(file[file.length - 1]);
-    file += 1;
-    console.log(file);
-    new Worker(1, [file]);
+// @NOTE 352373 beyond this has delete tag
+// var min = parseInt(process.env.PAGE_MIN);
+// if (!min) {
+//     var file = fs.readFileSync(dbName + 'lastAdded', 'utf-8');
+//     file = file.split('\n').filter(x => x !== '');
+//     file = parseInt(file[file.length - 1]);
+//     file += 1;
+//     console.log(file);
+//     new Worker(1, [file]);
 
-}
-// var max = (parseInt(process.env.PAGE_MAX) + 1) * 1000;
-
-// new Worker(1, R.range(min, max));
-// new Worker(1, [min]);
+// }
+var max = (parseInt(process.env.MAX, 10 ) + 1) * 1000;
+var min = parseInt(process.env.MIN, 10) * 1000
+new Worker(1, R.range(min, max));
+new Worker(1, [min]);

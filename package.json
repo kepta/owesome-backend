@@ -5,12 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server.js"
+    "start": "nodemon server.js",
+    "deploy": "rsync --archive       --delete       --progress       --human-readable       --exclude node_modules       --exclude .DS_Store       --exclude .git  ./ gcloud:~/backend"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.17.1",
+    "cors": "^2.8.1",
     "express": "^4.15.2",
     "moment": "^2.17.1",
     "mongodb": "^2.2.24",

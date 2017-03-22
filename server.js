@@ -3,11 +3,12 @@ const app = express();
 const PORT = 5000;
 var logger = require('morgan');
 var bodyParser = require('body-parser');
-
+var cors = require('cors');
 var routes = require('./routes/index');
 var monk = require('monk');
 var db = monk(require('./config'));
 
+app.use(cors())
 app.use(logger('dev'));
 
 app.use(bodyParser.json());
