@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js",
-    "deploy": "rsync --archive       --delete       --progress       --human-readable       --exclude node_modules       --exclude .DS_Store       --exclude .git  ./ gcloud:~/backend"
+    "deploy": "rsync --archive       --delete       --progress       --human-readable       --exclude node_modules      --exclude scripts/data  --exclude .DS_Store       --exclude .git  ./ gcloud:~/backend"
   },
   "author": "",
   "license": "ISC",

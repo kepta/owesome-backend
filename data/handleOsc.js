@@ -128,7 +128,7 @@ class Worker {
         this.id = id;
         this.errors = [];
         this.currentPage = -1;
-        this.errortry = 0;
+        this.errortry = 1;
         this.onComplete = onComplete;
         this.file = file;
         ev.addListener(`worker${id}`, (data) => {
@@ -160,7 +160,8 @@ class Worker {
         .catch(e => {
             this.errors.push(page);
             console.log(page, e);
-            ev.emit(`worker${this.id}`, -1);
+            this.errortry += 1;
+            setTimeout(() => ev.emit(`worker${this.id}`, -1), this.errortry * 1000);
         })
     }
     giveWork() {
