@@ -28,7 +28,7 @@ function fill() {
     var filledFileName = 'scripts/data/' + dbName + '-filled-notFound.txt'
     // console.log(pages);
     new Worker(1, pages.slice(0, parseInt(pages.length / 2, 10)), onComplete(), filledFileName);
-    new Worker(1, pages.slice(parseInt(pages.length / 2, 10), pages.length), onComplete(), filledFileName);
+    new Worker(2, pages.slice(parseInt(pages.length / 2, 10), pages.length), onComplete(), filledFileName);
 }
 
 fill();

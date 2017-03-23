@@ -136,6 +136,7 @@ class Worker {
         });
         this.pagefetchDb = db.get('pagefetch');
         this.giveWork();
+        this.count = 0;
     }
     work(page) {
         var [minute, r] = split(page);
@@ -155,12 +156,15 @@ class Worker {
             return processFile(networkGet(r, minute), r, minute, this.file);
         })
         .then(() => {
+            if (this.errortry > 8) {
+                this.errortry /= 2;
+            }
             ev.emit(`worker${this.id}`, page);
         })
         .catch(e => {
             this.errors.push(page);
             console.log(page, e);
-            this.errortry += 1;
+            this.errortry *= 2;
             setTimeout(() => ev.emit(`worker${this.id}`, -1), this.errortry * 1000);
         })
     }
@@ -169,6 +173,7 @@ class Worker {
         if (page) {
             console.log('starting', page);
             this.currentPage = page;
+            this.count++;
             this.work(page);
         }
         else {
