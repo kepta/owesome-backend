@@ -5,13 +5,11 @@ const xtoj = require('xml2js').parseString;
 const gimme = R.curry((s, d) => R.pluck(s, d).filter(R.identity));
 const fillDb = require('./fill');
 var moment = require('moment');
-var mongod = require('mongodb');
 var monk = require('monk');
 var events = require('events');
-var dbName = require('../config');
 var fs = require('fs');
-dbName = dbName.split('/')[1];
 var db = monk(require('../config'));
+
 function toPoint(lon, lat) {
     if (!lon || !lat) return null;
     return {
@@ -70,33 +68,10 @@ function getMetaData(obj) {
     };
 }
 
-const extractNWR = (rron) => ({
-    way: R.unnest(R.unnest(R.map(gimme('way'))(rron))),
-    relation: R.unnest(R.unnest(R.map(gimme('relation'))(rron))),
-    node: R.unnest(R.unnest(R.map(gimme('node'))(rron)))
-});
-
-const extractCDM = r => ({
-    modify: extractNWR(gimme('modify', r)),
-    delete: extractNWR(gimme('delete', r)),
-    create: extractNWR(gimme('create', r))
-});
-
-const bgMp = R.forEachObjIndexed((cdm, key1) => R.forEachObjIndexed((nwr, key2) => {
-        nwr.forEach(m => {
-        m.$.nwr = key2;
-        m.$.cdm = key1;
-})
-}, cdm));
 const flattenIt = R.curry(d => R.unnest(R.unnest(R.compose(R.map(R.values), R.values)(d))));
 const concatAll = R.unapply(R.reduce(R.concat, []));
 
-function digest(r) {
-    var osmChange = gimme('osmChange')(r);
-    var bgmp = bgMp(extractCDM(osmChange));
-    var flatten = flattenIt(bgmp);
-    return flatten;
-}
+
 function newDigest(r) {
     const pick = (x, y) => R.compose(
         R.map((i) => {
@@ -128,7 +103,7 @@ function networkGet(_n, p) {
         .then((d) => d.buffer());
 }
 
-function processFile(bufferProm, page, min) {
+function processFile(bufferProm, page, min, file) {
     return bufferProm
         .then(d => pako.inflate(d, { to: 'string' }))
         .then(d => new Promise((res, rej) => xtoj(d, { async: true }, (er, result) => {
@@ -137,12 +112,10 @@ function processFile(bufferProm, page, min) {
         })))
         .then(newDigest)
         .then(getMetaData)
-        .then(r => fillDb(r, page, min));
+        .then(r => fillDb(r, page, min, file));
 }
 
-module.exports = processFile;
 
-const THREADS = 2;
 var ev = new events.EventEmitter();
 
 function split(n) {
@@ -150,12 +123,14 @@ function split(n) {
 }
 
 class Worker {
-    constructor(id, queue) {
+    constructor(id, queue, onComplete, file) {
         this.queue = queue || [];
         this.id = id;
         this.errors = [];
         this.currentPage = -1;
         this.errortry = 0;
+        this.onComplete = onComplete;
+        this.file = file;
         ev.addListener(`worker${id}`, (data) => {
             this.giveWork();
         });
@@ -169,7 +144,7 @@ class Worker {
             if (d) {
                 console.log('db has', page);
                 return new Promise((res, rej) => {
-                    fs.appendFile(dbName + 'lastAdded', page + '\n', (e) => {
+                    fs.appendFile(this.file, page + '\n', (e) => {
                         if (e) rej(e);
                         res();
                     });
@@ -177,7 +152,7 @@ class Worker {
                 });
                 return null;
             }
-            return processFile(networkGet(r, minute), r, minute);
+            return processFile(networkGet(r, minute), r, minute, this.file);
         })
         .then(() => {
             ev.emit(`worker${this.id}`, page);
@@ -198,31 +173,10 @@ class Worker {
         else {
             this.currentPage = -1;
             console.log('FIN' + this.id + 'finished stuff', this.errors);
-            process.exit(0);
-            if (this.errors.length > 0 && this.errortry === 0) {
-                console.error('Error retry', this.errors);
-                this.queue = this.errors;
-                this.errors = [];
-                this.currentPage = -1;
-                this.errortry = 1;
-                this.giveWork();
-            }
+            this.onComplete(this.errors);
         }
     }
 }
 
-// @NOTE 352373 beyond this has delet
-var min = parseInt(process.env.PAGE_MIN);
-if (!min) {
-    var file = fs.readFileSync(dbName + 'lastAdded', 'utf-8');
-    file = file.split('\n').filter(x => x !== '');
-    file = parseInt(file[file.length - 1]);
-    file += 1;
-    console.log(file);
-    new Worker(1, [file]);
 
-}
-// var max = (parseInt(process.env.PAGE_MAX) + 1) * 1000;
-
-// new Worker(1, R.range(min, max));
-// new Worker(1, [min]);
+module.exports = Worker;

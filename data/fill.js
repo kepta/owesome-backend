@@ -3,9 +3,8 @@ var monk = require('monk');
 var db = monk(require('../config'));
 var R = require('ramda');
 var fs = require('fs');
-var dbName = require('../config');
-dbName = dbName.split('/')[1];
-function fillDb(_data, page, min) {
+
+function fillDb(_data, page, min, file) {
     var pagemetadata = db.get('pagemetadata');
     var pagefetchCol = db.get('pagefetch');
     var user = db.get('user');
@@ -16,7 +15,7 @@ function fillDb(_data, page, min) {
     data.page += page;
     if (!data) {
         return new Promise((res, rej) => {
-            fs.appendFile(dbName + 'lastAdded', data.page + '\n', (e) => {
+            fs.appendFile(file, data.page + '\n', (e) => {
                 if (e) rej(e);
                 res();
             });
@@ -45,11 +44,10 @@ function fillDb(_data, page, min) {
         }
         return Promise.all(p).then(x => {
             return new Promise((res, rej) => {
-                fs.appendFile(dbName + 'lastAdded', data.page + '\n', (e) => {
+                fs.appendFile(file, data.page + '\n', (e) => {
                     if (e) rej(e);
                     res();
                 });
-                
             });
         });
     });
