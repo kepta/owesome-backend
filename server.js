@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const PORT = 5000;
+const PORT = 4050;
 var logger = require('morgan');
 var bodyParser = require('body-parser');
 var cors = require('cors');
