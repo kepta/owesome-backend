@@ -23,6 +23,7 @@
     "pako": "^1.0.4",
     "ramda": "^0.23.0",
     "request": "^2.81.0",
+    "turf-bbox-polygon": "^3.0.12",
     "whatwg-fetch": "^2.0.3",
     "xml2js": "^0.4.17"
   },

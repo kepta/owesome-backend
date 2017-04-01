@@ -3,6 +3,8 @@ var router = express.Router();
 var moment = require('moment');
 var mongo = require('mongodb');
 var R = require('ramda');
+var bboxtoPoly = require('turf-bbox-polygon');
+
 /* GET home page. */
 router.get('/', function(req, res) {
     res.render('index', { title: 'Express' });
@@ -56,21 +58,26 @@ router.get('/page', function(req, res) {
             }
         }, query)
         console.log(q);
-        var collection = db.get('user');
+        const collection = db.get('user');
         promises.push(collection.find(q, ['page']).then(docs => docs.map(d => d.page)));
     }
 
     if (bbox) {
-        query.lat = { $elemMatch: { $lte: parseFloat(bbox[3]), $gte: parseFloat(bbox[1]) } };
-        query.lon = { $elemMatch: { $lte: parseFloat(bbox[2]), $gte: parseFloat(bbox[0]) } };
+        bbox = bbox.map(n => parseFloat(n));
+        const q = Object.assign({
+            coords: {
+                $geoWithin: {
+                    $geometry: bboxtoPoly(bbox).geometry
+                }
+            }
+        }, query);
+        console.log('check', q, JSON.stringify(bboxtoPoly(bbox).geometry, null, 2), 'check2');
+        const collection = db.get('coords');
+        promises.push(collection.find(q, ['page']).then(docs => docs.map(d => d.page)));
     }
+
     Promise.all(promises).then(r => {
-        var result = r[0];
-        console.log(r);
-        if (r.length > 1) {
-            result = R.intersection(r[0], r[1]);
-        }
-        console.log(result);
+        var result = r.reduce((s, n) => R.intersection(s, n), r[0]);
         res.json({ len: result.length, docs: result });
     })
     // db.pagemetadata.find({ coords: {$geoWithin:{ $geometry:  {  "type": "Polygon","coordinates": [ [ [   -18.6328125,   43.58039085560784 ], [   46.05468749999999,   43.58039085560784 ], [   46.05468749999999,   62.2679226294176 ], [   -18.6328125,   62.2679226294176 ], [   -18.6328125,  43.58039085560784 ] ] ]}     } }} )
